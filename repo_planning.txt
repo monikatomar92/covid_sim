@@ -1,0 +1,4 @@
+- Functionality of simulators in epidemiology
+- covid simulators at this point
+- current covid modeling
+- covid data
