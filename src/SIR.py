@@ -3,7 +3,7 @@
 # @Author: Monika Tomar
 # @Date:   2020-11-29 23:56:24
 # @Last Modified by:   Monika Tomar
-# @Last Modified time: 2020-12-03 02:21:13
+# @Last Modified time: 2020-12-03 02:51:05
 
 import numpy as np
 from scipy.integrate import odeint
@@ -56,7 +56,7 @@ def run_model(model_func, initial_conditions, time, params):
     return ret
 
 
-def predict_SIR(model_func, initial_functions, time, params):
+def predict_SIR(model_func, initial_conditions, time, params):
     predicted_data = run_model(model_func, initial_conditions, time, params)
     predicted_S = predicted_data[:, 0]
     predicted_I = predicted_data[:, 1]
@@ -111,7 +111,7 @@ def estimate_params(confirmed_csv, recovered_csv, death_csv, population_dict,
                       args=(initial_conditions, t, gt_data, deriv_SIR),
                       method="leastsq")
 
-    return result.params, t
+    return S_data, I_data, RE_data, result.params, initial_conditions, t
 
 
 ################################################################################
@@ -119,8 +119,6 @@ def estimate_params(confirmed_csv, recovered_csv, death_csv, population_dict,
 ################################################################################
 
 #***********************Reading data from CSVs**********************************
-n_simulation = 50
-country = "India"
 population_dict = {
     "India": 1380000000,
     "Italy": 60360000,
@@ -138,10 +136,26 @@ recovered_csv = read_csv(recovered_csvname)
 death_csv = read_csv(death_csvname)
 #*******************************************************************************
 #***********************Modelling and Prediction********************************
-params, t = estimate_params(confirmed_csv, recovered_csv, death_csv,
-                            population_dict, country, start_date, n_simulation)
-print(params)
-exit(0)
+S = {}
+I = {}
+R = {}
+S_p = {}
+I_p = {}
+R_p = {}
+
+country = ["India", "Italy", "New Zealand"]
+n_days = [75, 150, 225, 300]
+
+for c in country:
+    for n in n_days:
+        key = c + str(n)
+        S[key], I[key], R[
+            key], params, initial_conditions, t = estimate_params(
+                confirmed_csv, recovered_csv, death_csv, population_dict, c,
+                start_date, n)
+        S_p[key], I_p[key], R_p[key] = predict_SIR(deriv_SIR,
+                                                   initial_conditions, t,
+                                                   params)
 #*******************************************************************************
 
 #**********************Plotting results*****************************************
