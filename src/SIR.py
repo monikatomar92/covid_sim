@@ -3,7 +3,7 @@
 # @Author: Monika Tomar
 # @Date:   2020-11-29 23:56:24
 # @Last Modified by:   Monika Tomar
-# @Last Modified time: 2020-12-04 14:51:17
+# @Last Modified time: 2020-12-04 14:57:14
 
 import numpy as np
 from scipy.integrate import odeint
@@ -227,6 +227,95 @@ def visualize_600(country, n_days, initial_conditions):
     save(net_fig)
 
 
+def visualize_parameter_sweep(params, initial_conditions, t):
+    output_file("parameter_sweep.html")
+    country_sweep = "India"
+    n_days_sweep = 75
+    key = country_sweep + "," + str(n_days_sweep)
+    params_sweep = params[key]
+    S_p, I_p, R_p = predict_SIR(deriv_SIR, initial_conditions, t, params_sweep)
+    params_sweep["beta"].value = (params_sweep["beta"].value) * 2
+    S_p_beta, I_p_beta, R_p_beta = predict_SIR(deriv_SIR, initial_conditions,
+                                               t, params_sweep)
+
+    tools = "hover,box_select,pan,xwheel_zoom,xbox_zoom,save,reset"
+    tooltips = [("Number of people", "@y{int}"), ("Days", "@x")]
+    p1 = figure(
+        plot_width=800,
+        plot_height=600,
+        title=
+        "Adjusting for Compliance/Non-compliance,For asyptomatic and superspreader infections",
+        tools=tools,
+        tooltips=tooltips)
+    p1.xaxis.axis_label = 'Number of days'
+    p1.xaxis.formatter.use_scientific = False
+    p1.yaxis.axis_label = 'Number of people'
+    p1.yaxis.formatter.use_scientific = False
+
+    p1.circle(range(len(I_p)),
+              I_p,
+              color="orange",
+              legend_label="I, lower beta")
+    p1.circle(range(len(R_p)),
+              R_p,
+              color="green",
+              legend_label="R, lower beta")
+    p1.line(range(len(I_p)), I_p, color="orange", alpha=0.5)
+    p1.line(range(len(R_p)), R_p, color="green", alpha=0.5)
+
+    p1.circle(range(len(I_p_beta)),
+              I_p_beta,
+              color="blue",
+              legend_label="I, higher beta")
+    p1.circle(range(len(R_p_beta)),
+              R_p_beta,
+              color="purple",
+              legend_label="R, higher beta")
+    p1.line(range(len(I_p_beta)), I_p_beta, color="blue", alpha=0.5)
+    p1.line(range(len(R_p_beta)), R_p_beta, color="purple", alpha=0.5)
+
+    params_sweep["beta"].value = (params_sweep["beta"].value) * 0.5
+    params_sweep["gamma"].value = (params_sweep["gamma"].value) * 0.5
+    S_p_gamma, I_p_gamma, R_p_gamma = predict_SIR(deriv_SIR,
+                                                  initial_conditions, t,
+                                                  params_sweep)
+
+    p2 = figure(plot_width=800,
+                plot_height=600,
+                title="Adjusting for infection load",
+                tools=tools,
+                tooltips=tooltips)
+    p2.xaxis.axis_label = 'Number of days'
+    p2.xaxis.formatter.use_scientific = False
+    p2.yaxis.axis_label = 'Number of people'
+    p2.yaxis.formatter.use_scientific = False
+
+    p2.circle(range(len(I_p)),
+              I_p,
+              color="orange",
+              legend_label="I, higher gamma")
+    p2.circle(range(len(R_p)),
+              R_p,
+              color="green",
+              legend_label="R, higher gamma")
+    p2.line(range(len(I_p)), I_p, color="orange", alpha=0.5)
+    p2.line(range(len(R_p)), R_p, color="green", alpha=0.5)
+
+    p2.circle(range(len(I_p_gamma)),
+              I_p_gamma,
+              color="blue",
+              legend_label="I, lower gamma")
+    p2.circle(range(len(R_p_gamma)),
+              R_p_gamma,
+              color="purple",
+              legend_label="R, lower gamma")
+    p2.line(range(len(I_p_gamma)), I_p_gamma, color="blue", alpha=0.5)
+    p2.line(range(len(R_p_gamma)), R_p_gamma, color="purple", alpha=0.5)
+
+    net_fig = gridplot([[p1, p2]])
+    show(net_fig)
+
+
 ################################################################################
 #############################Running the code###################################
 ################################################################################
@@ -276,80 +365,7 @@ for c in country:
 #***********************Visualization*******************************************
 visualize(country, n_days, S, I, R, S_p, I_p, R_p)
 visualize_600(country, n_days, initial_conditions)
-
-output_file("paramater_sweep.html")
-country_sweep = "India"
-n_days_sweep = 75
-key = country_sweep + "," + str(n_days_sweep)
-params_sweep = params[key]
-S_p, I_p, R_p = predict_SIR(deriv_SIR, initial_conditions, t, params_sweep)
-params_sweep["beta"].value = (params_sweep["beta"].value) * 2
-S_p_beta, I_p_beta, R_p_beta = predict_SIR(deriv_SIR, initial_conditions, t,
-                                           params_sweep)
-
-tools = "hover,box_select,pan,xwheel_zoom,xbox_zoom,save,reset"
-tooltips = [("Number of people", "@y{int}"), ("Days", "@x")]
-p1 = figure(
-    plot_width=800,
-    plot_height=600,
-    title=
-    "Adjusting for Compliance/Non-compliance,For asyptomatic and superspreader infections",
-    tools=tools,
-    tooltips=tooltips)
-p1.xaxis.axis_label = 'Number of days'
-p1.xaxis.formatter.use_scientific = False
-p1.yaxis.axis_label = 'Number of people'
-p1.yaxis.formatter.use_scientific = False
-
-p1.circle(range(len(I_p)), I_p, color="orange", legend_label="I, lower beta")
-p1.circle(range(len(R_p)), R_p, color="green", legend_label="R, lower beta")
-p1.line(range(len(I_p)), I_p, color="orange", alpha=0.5)
-p1.line(range(len(R_p)), R_p, color="green", alpha=0.5)
-
-p1.circle(range(len(I_p_beta)),
-          I_p_beta,
-          color="blue",
-          legend_label="I, higher beta")
-p1.circle(range(len(R_p_beta)),
-          R_p_beta,
-          color="purple",
-          legend_label="R, higher beta")
-p1.line(range(len(I_p_beta)), I_p_beta, color="blue", alpha=0.5)
-p1.line(range(len(R_p_beta)), R_p_beta, color="purple", alpha=0.5)
-
-params_sweep["beta"].value = (params_sweep["beta"].value) * 0.5
-params_sweep["gamma"].value = (params_sweep["gamma"].value) * 0.5
-S_p_gamma, I_p_gamma, R_p_gamma = predict_SIR(deriv_SIR, initial_conditions, t,
-                                              params_sweep)
-
-p2 = figure(plot_width=800,
-            plot_height=600,
-            title="Adjusting for infection load",
-            tools=tools,
-            tooltips=tooltips)
-p2.xaxis.axis_label = 'Number of days'
-p2.xaxis.formatter.use_scientific = False
-p2.yaxis.axis_label = 'Number of people'
-p2.yaxis.formatter.use_scientific = False
-
-p2.circle(range(len(I_p)), I_p, color="orange", legend_label="I, higher gamma")
-p2.circle(range(len(R_p)), R_p, color="green", legend_label="R, higher gamma")
-p2.line(range(len(I_p)), I_p, color="orange", alpha=0.5)
-p2.line(range(len(R_p)), R_p, color="green", alpha=0.5)
-
-p2.circle(range(len(I_p_gamma)),
-          I_p_gamma,
-          color="blue",
-          legend_label="I, lower gamma")
-p2.circle(range(len(R_p_gamma)),
-          R_p_gamma,
-          color="purple",
-          legend_label="R, lower gamma")
-p2.line(range(len(I_p_gamma)), I_p_gamma, color="blue", alpha=0.5)
-p2.line(range(len(R_p_gamma)), R_p_gamma, color="purple", alpha=0.5)
-
-net_fig = gridplot([[p1, p2]])
-show(net_fig)
+visualize_parameter_sweep(params, initial_conditions, t)
 #*******************************************************************************
 
 ################################################################################
