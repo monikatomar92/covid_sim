@@ -3,13 +3,16 @@
 # @Author: Monika Tomar
 # @Date:   2020-11-29 23:56:24
 # @Last Modified by:   Monika Tomar
-# @Last Modified time: 2020-12-03 02:51:05
+# @Last Modified time: 2020-12-03 19:54:33
 
 import numpy as np
 from scipy.integrate import odeint
 import pandas as pd
 from bokeh.io import output_file, show, save
+from bokeh.layouts import gridplot
+from bokeh.models import Div
 from bokeh.plotting import figure
+from bokeh.layouts import column
 from lmfit import minimize, Parameters, Parameter, report_fit
 
 ################################################################################
@@ -75,7 +78,7 @@ def error(params, initial_conditions, t, gt_data, model_func):
 
 
 def estimate_params(confirmed_csv, recovered_csv, death_csv, population_dict,
-                    country, start_date, n_simulation):
+                    country, start_date, n_simulation, n_prediction):
     I_data = get_country_data(confirmed_csv, country, start_date, n_simulation)
     R_data = get_country_data(recovered_csv, country, start_date, n_simulation)
     D_data = get_country_data(death_csv, country, start_date, n_simulation)
@@ -101,6 +104,7 @@ def estimate_params(confirmed_csv, recovered_csv, death_csv, population_dict,
 
     #****************************Time axis******************************************
     t = np.linspace(0, n_simulation, n_simulation)
+    t_predict = np.linspace(0, n_prediction, n_prediction)
     #*******************************************************************************
 
     #*********************Estimating the parameters of the model*******************
@@ -111,7 +115,69 @@ def estimate_params(confirmed_csv, recovered_csv, death_csv, population_dict,
                       args=(initial_conditions, t, gt_data, deriv_SIR),
                       method="leastsq")
 
-    return S_data, I_data, RE_data, result.params, initial_conditions, t
+    return S_data, I_data, RE_data, result.params, initial_conditions, t_predict
+
+
+################################################################################
+#############################Visualization functions############################
+################################################################################
+
+
+def visualize(country, n_days, S, I, R, S_p, I_p, R_p):
+    output_file("SIR.html")
+    div = Div(text="SIR Model",
+              width=200,
+              height=20,
+              align="center",
+              style={
+                  'font-size': '200%',
+                  'font-weight': 'bold'
+              })
+    tools = "hover,box_select,pan,xwheel_zoom,xbox_zoom,save,reset"
+    tooltips = [("Number of people", "@y{int}"), ("Days", "@x")]
+    net_layout = []
+    for c in country:
+        country_layout = []
+        for n in n_days:
+            key = c + str(n)
+            title = "Country:" + c + "\nNumber of days:" + str(n)
+            p = figure(plot_width=450,
+                       plot_height=280,
+                       title=title,
+                       tools=tools,
+                       tooltips=tooltips)
+            p.xaxis.axis_label = 'Number of days'
+            p.xaxis.formatter.use_scientific = False
+            p.yaxis.axis_label = 'Number of people'
+            p.yaxis.formatter.use_scientific = False
+
+            p.circle(range(len(I[key])),
+                     I[key],
+                     color="orange",
+                     legend_label="I")
+            p.circle(range(len(R[key])),
+                     R[key],
+                     color="green",
+                     legend_label="R")
+            p.line(range(len(I[key])), I[key], color="orange", alpha=0.5)
+            p.line(range(len(R[key])), R[key], color="green", alpha=0.5)
+
+            p.square(range(len(I_p[key])),
+                     I_p[key],
+                     color="blue",
+                     legend_label="Predicted I")
+            p.square(range(len(R_p[key])),
+                     R_p[key],
+                     color="purple",
+                     legend_label="Predicted R")
+            p.line(range(len(I_p[key])), I_p[key], color="blue", alpha=0.5)
+            p.line(range(len(R_p[key])), R_p[key], color="purple", alpha=0.5)
+            p.legend.location = "top_left"
+            p.legend.label_text_font_size = "7pt"
+            country_layout.append(p)
+        net_layout.append(country_layout)
+    net_fig = gridplot(net_layout)
+    show(column(div, net_fig))
 
 
 ################################################################################
@@ -144,7 +210,7 @@ I_p = {}
 R_p = {}
 
 country = ["India", "Italy", "New Zealand"]
-n_days = [75, 150, 225, 300]
+n_days = [75, 150, 225, 600]
 
 for c in country:
     for n in n_days:
@@ -152,19 +218,15 @@ for c in country:
         S[key], I[key], R[
             key], params, initial_conditions, t = estimate_params(
                 confirmed_csv, recovered_csv, death_csv, population_dict, c,
-                start_date, n)
+                start_date, min(n, 314), n)
         S_p[key], I_p[key], R_p[key] = predict_SIR(deriv_SIR,
                                                    initial_conditions, t,
                                                    params)
 #*******************************************************************************
-
-#**********************Plotting results*****************************************
-# output_file("test.html")
-# p = figure(plot_width=600, plot_height=600, title=None)
-# p.circle(range(len(I_data)), I_data, color="orange")
-# p.circle(range(len(R_data)), R_data + D_data, color="green")
-
-# p.cross(range(len(predicted_I)), predicted_I, color="orange")
-# p.cross(range(len(predicted_R)), predicted_R, color="green")
-# show(p)
+#***********************Visualization*******************************************
+visualize(country, n_days, S, I, R, S_p, I_p, R_p)
 #*******************************************************************************
+
+################################################################################
+#############################End################################################
+################################################################################
