@@ -3,7 +3,7 @@
 # @Author: Monika Tomar
 # @Date:   2020-11-29 23:56:24
 # @Last Modified by:   Monika Tomar
-# @Last Modified time: 2020-12-04 14:57:14
+# @Last Modified time: 2020-12-04 15:11:41
 
 import numpy as np
 from scipy.integrate import odeint
@@ -12,7 +12,8 @@ from bokeh.io import output_file, show, save
 from bokeh.layouts import gridplot
 from bokeh.models import Div
 from bokeh.plotting import figure
-from bokeh.layouts import column
+from bokeh.layouts import column, layout
+from bokeh.models.widgets import Panel, Tabs
 from lmfit import minimize, Parameters, Parameter, report_fit
 
 ################################################################################
@@ -124,7 +125,6 @@ def estimate_params(confirmed_csv, recovered_csv, death_csv, population_dict,
 
 
 def visualize(country, n_days, S, I, R, S_p, I_p, R_p):
-    output_file("SIR.html")
     div = Div(text="SIR Model",
               width=200,
               height=20,
@@ -177,13 +177,13 @@ def visualize(country, n_days, S, I, R, S_p, I_p, R_p):
             country_layout.append(p)
         net_layout.append(country_layout)
     net_fig = gridplot(net_layout)
-    save(column(div, net_fig))
+    net_layout = column(div, net_fig)
+    return Panel(child=net_layout, title="Model Expressivity")
 
 
 def visualize_600(country, n_days, initial_conditions):
     color_dict = {75: "blue", 150: "green", 225: "red", 300: "purple"}
     t_600 = np.linspace(0, 600, 600)
-    output_file("SIR_600.html")
     tools = "hover,box_select,pan,xwheel_zoom,xbox_zoom,save,reset"
     tooltips = [("Number of people", "@y{int}"), ("Days", "@x")]
     net_600_layout = []
@@ -223,12 +223,11 @@ def visualize_600(country, n_days, initial_conditions):
         p.legend.location = "top_left"
         p.legend.label_text_font_size = "7pt"
         net_600_layout.append(p)
-    net_fig = gridplot([net_600_layout])
-    save(net_fig)
+    net_fig = layout([net_600_layout])
+    return Panel(child=net_fig, title="Parameter Prediction")
 
 
 def visualize_parameter_sweep(params, initial_conditions, t):
-    output_file("parameter_sweep.html")
     country_sweep = "India"
     n_days_sweep = 75
     key = country_sweep + "," + str(n_days_sweep)
@@ -312,8 +311,8 @@ def visualize_parameter_sweep(params, initial_conditions, t):
     p2.line(range(len(I_p_gamma)), I_p_gamma, color="blue", alpha=0.5)
     p2.line(range(len(R_p_gamma)), R_p_gamma, color="purple", alpha=0.5)
 
-    net_fig = gridplot([[p1, p2]])
-    show(net_fig)
+    net_fig = layout([[p1, p2]])
+    return Panel(child=net_fig, title="Parameter Sweep")
 
 
 ################################################################################
@@ -363,9 +362,15 @@ for c in country:
                                                    params[key])
 #*******************************************************************************
 #***********************Visualization*******************************************
-visualize(country, n_days, S, I, R, S_p, I_p, R_p)
-visualize_600(country, n_days, initial_conditions)
-visualize_parameter_sweep(params, initial_conditions, t)
+output_file("SIR_dashboard.html")
+
+display_tabs = []
+display_tabs.append(visualize(country, n_days, S, I, R, S_p, I_p, R_p))
+display_tabs.append(visualize_600(country, n_days, initial_conditions))
+display_tabs.append(visualize_parameter_sweep(params, initial_conditions, t))
+
+dashboard = Tabs(tabs=display_tabs)
+show(dashboard)
 #*******************************************************************************
 
 ################################################################################
