@@ -3,7 +3,7 @@
 # @Author: Monika Tomar
 # @Date:   2020-11-29 23:56:24
 # @Last Modified by:   Monika Tomar
-# @Last Modified time: 2020-12-06 05:18:52
+# @Last Modified time: 2020-12-06 23:24:52
 
 import numpy as np
 from scipy.integrate import odeint
@@ -15,6 +15,7 @@ from bokeh.plotting import figure
 from bokeh.layouts import column, layout
 from bokeh.models.widgets import Panel, Tabs
 from lmfit import minimize, Parameters, Parameter, report_fit
+import pickle
 
 ################################################################################
 #############################Data processing Related functions##################
@@ -111,7 +112,7 @@ def predict_own_model(model_func, initial_conditions, time, params):
     predicted_D = predicted_data[:, 10]
     # return predicted_Sc, predicted_Snc, predicted_Ell, predicted_Ehl, predicted_Ia, predicted_Is, predicted_Iss, predicted_Qh, predicted_Qhos, predicted_R, predicted_D
     predicted_I = predicted_Ia + predicted_Is + predicted_Iss
-    return predicted_I, predicted_R, predicted_D
+    return predicted_Sc, predicted_Snc, predicted_Ell, predicted_Ehl, predicted_Ia, predicted_Is, predicted_Iss, predicted_Qh, predicted_Qhos, predicted_R, predicted_D
 
 
 ################################################################################
@@ -153,32 +154,32 @@ def estimate_params(confirmed_csv, recovered_csv, death_csv, population_dict,
     #***********************Initialization for parameters***************************
     import random
 
-    beta_s = random.random()
-    beta_a = random.random()
-    beta_ss = random.random()
-    beta_Qh = random.random()
-    beta_Qhos = random.random()
-    alpha_c = random.random()
-    alpha_nc = random.random()
-    theta = random.random()
-    theta_hos = random.random()
-    theta_h = random.random()
-    gamma_llc = random.random()
-    gamma_llnc = random.random()
-    kappa_ll = random.random()
-    kappa_hl = random.random()
-    rho = random.random()
-    rho_hls = random.random()
-    rho_hla = random.random()
-    rho_lls = random.random()
-    rho_lla = random.random()
-    delta_ss = random.random()
-    delta_s = random.random()
-    delta_a = random.random()
-    ita_ss = random.random()
-    ita_s = random.random()
-    lambda_hos = random.random()
-    lambda_h = random.random()
+    beta_s = 1
+    beta_a = 1
+    beta_ss = 1
+    beta_Qh = 1
+    beta_Qhos = 1
+    alpha_c = 1
+    alpha_nc = 1
+    theta = 1
+    theta_hos = 1
+    theta_h = 1
+    gamma_llc = 0.1
+    gamma_llnc = 0.1
+    kappa_ll = 1
+    kappa_hl = 1
+    rho = 0.1
+    rho_hls = 0.1
+    rho_hla = 0.1
+    rho_lls = 0.1
+    rho_lla = 0.1
+    delta_ss = 1
+    delta_s = 1
+    delta_a = 1
+    ita_ss = 0.1
+    ita_s = 0.1
+    lambda_hos = 1
+    lambda_h = 1
 
     params = Parameters()
     params.add('beta_s', value=beta_s, min=0, max=10)
@@ -267,8 +268,13 @@ def visualize(country, n_days, I, R, D, I_p, R_p, D_p):
                      R[key],
                      color="green",
                      legend_label="R")
+            p.circle(range(len(D[key])),
+                     D[key],
+                     color="brown",
+                     legend_label="D")
             p.line(range(len(I[key])), I[key], color="orange", alpha=0.5)
             p.line(range(len(R[key])), R[key], color="green", alpha=0.5)
+            p.line(range(len(D[key])), D[key], color="brown", alpha=0.5)
 
             p.square(range(len(I_p[key])),
                      I_p[key],
@@ -278,8 +284,13 @@ def visualize(country, n_days, I, R, D, I_p, R_p, D_p):
                      R_p[key],
                      color="purple",
                      legend_label="Predicted R")
+            p.square(range(len(D_p[key])),
+                     D_p[key],
+                     color="cyan",
+                     legend_label="Predicted D")
             p.line(range(len(I_p[key])), I_p[key], color="blue", alpha=0.5)
             p.line(range(len(R_p[key])), R_p[key], color="purple", alpha=0.5)
+            p.line(range(len(D_p[key])), D_p[key], color="cyan", alpha=0.5)
             p.legend.location = "top_left"
             p.legend.label_text_font_size = "7pt"
             country_layout.append(p)
@@ -291,7 +302,7 @@ def visualize(country, n_days, I, R, D, I_p, R_p, D_p):
 
 def visualize_600(country, n_days, initial_conditions):
     color_dict = {75: "blue", 150: "green", 225: "red", 300: "purple"}
-    t_600 = np.linspace(0, 600, 600)
+    t_600 = np.linspace(0, 730, 730)
     tools = "hover,box_select,pan,xwheel_zoom,xbox_zoom,save,reset"
     tooltips = [("Number of people", "@y{int}"), ("Days", "@x")]
     net_600_layout = []
@@ -309,8 +320,9 @@ def visualize_600(country, n_days, initial_conditions):
 
         for n in n_days:
             key = c + "," + str(n)
-            I_p_600, R_p_600, D_p_600 = predict_own_model(
+            Sc_p_600, Snc_p_600, Ell_p_600, Ehl_p_600, Ia_p_600, Is_p_600, Iss_p_600, Qh_p_600, Qhos_p_600, R_p_600, D_p_600 = predict_own_model(
                 deriv_own_model, initial_conditions, t_600, params[key])
+            I_p_600 = Ia_p_600 + Is_p_600 + Iss_p_600
             p.cross(range(len(I_p_600)),
                     I_p_600,
                     color=color_dict[n],
@@ -325,6 +337,14 @@ def visualize_600(country, n_days, initial_conditions):
                      legend_label="R for t=" + str(n))
             p.line(range(len(R_p_600)),
                    R_p_600,
+                   color=color_dict[n],
+                   alpha=0.5)
+            p.square(range(len(D_p_600)),
+                     D_p_600,
+                     color=color_dict[n],
+                     legend_label="D for t=" + str(n))
+            p.line(range(len(D_p_600)),
+                   D_p_600,
                    color=color_dict[n],
                    alpha=0.5)
         p.legend.location = "top_left"
@@ -448,12 +468,21 @@ death_csv = read_csv(death_csvname)
 I = {}
 R = {}
 D = {}
-I_p = {}
+Sc_p = {}
+Snc_p = {}
+Ell_p = {}
+Ehl_p = {}
+Ia_p = {}
+Is_p = {}
+Iss_p = {}
+Qh_p = {}
+Qhos_p = {}
 R_p = {}
 D_p = {}
+I_p = {}
 params = {}
 
-country = ["New Zealand"]
+country = ["India", "Italy", "New Zealand"]
 n_days = [75, 150, 225, 300]
 
 t = None
@@ -465,15 +494,42 @@ for c in country:
             key], initial_conditions, t = estimate_params(
                 confirmed_csv, recovered_csv, death_csv, population_dict, c,
                 start_date, min(n, 314), n)
-        I_p[key], R_p[key], D_p[key] = predict_own_model(
-            deriv_own_model, initial_conditions, t, params[key])
+        Sc_p[key], Snc_p[key], Ell_p[key], Ehl_p[key], Ia_p[key], Is_p[
+            key], Iss_p[key], Qh_p[key], Qhos_p[key], R_p[key], D_p[
+                key] = predict_own_model(deriv_own_model, initial_conditions,
+                                         t, params[key])
+        I_p[key] = Ia_p[key] + Is_p[key] + Iss_p[key]
+#*******************************************************************************
+#****************************Saving pickle objects******************************
+file_dict = {
+    "I.pickle": I,
+    "R.pickle": R,
+    "D.pickle": D,
+    "Sc_p.pickle": Sc_p,
+    "Snc_p.pickle": Snc_p,
+    "Ell_p.pickle": Ell_p,
+    "Ehl_p.pickle": Ehl_p,
+    "Ia_p.pickle": Ia_p,
+    "Is_p.pickle": Is_p,
+    "Iss_p.pickle": Iss_p,
+    "Qh_p.pickle": Qh_p,
+    "Qhos_p.pickle": Qhos_p,
+    "R_p.pickle": R_p,
+    "D_p.pickle": D_p,
+    "I_p.pickle": I_p,
+    "params.pickle": params
+}
+out_dir = "saved_state/"
+for i in file_dict.keys():
+    with open(out_dir + i, "wb") as handle:
+        pickle.dump(file_dict[i], handle)
 #*******************************************************************************
 #***********************Visualization*******************************************
 output_file("own_model_dashboard.html")
 
 display_tabs = []
 display_tabs.append(visualize(country, n_days, I, R, D, I_p, R_p, D_p))
-# display_tabs.append(visualize_600(country, n_days, initial_conditions))
+display_tabs.append(visualize_600(country, n_days, initial_conditions))
 # display_tabs.append(visualize_parameter_sweep(params, initial_conditions, t))
 
 dashboard = Tabs(tabs=display_tabs)
