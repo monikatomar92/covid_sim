@@ -2,7 +2,7 @@
 # @Author: Monika Tomar
 # @Date:   2020-12-06 21:57:41
 # @Last Modified by:   Monika Tomar
-# @Last Modified time: 2020-12-06 23:40:58
+# @Last Modified time: 2020-12-07 00:02:59
 
 from collections import defaultdict
 import numpy as np
@@ -80,7 +80,6 @@ for j in stats_list:
     for k in operations_dict:
         for l in country_list:
             key = l + "," + str(300)
-            print(j, k, key)
             summary_stats_dict[j][l][k] = operations_dict[k](file_dict[j][key])
 
 with open("summary_stats.json", "w") as json_file:
@@ -88,7 +87,16 @@ with open("summary_stats.json", "w") as json_file:
               json_file,
               sort_keys=True,
               indent=4,
-              default=lambda o: o.__dict__)
+              default=lambda o: o._asdict())
+
+params_dict = defaultdict(Parameters)
+for l in country_list:
+    key = l + "," + str(300)
+    params_dict[key] = file_dict["params.pickle"][key]
+print(params_dict)
+
+with open("params.txt", "w") as json_file:
+    json_file.write(str(dict(params_dict)))
 
 ################################################################################
 #############################Visualizations#####################################
